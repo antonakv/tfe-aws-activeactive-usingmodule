@@ -1,3 +1,14 @@
+locals {
+  friendly_name_prefix = random_string.friendly_name.id
+}
+
+resource "random_string" "friendly_name" {
+  length  = 4
+  upper   = false
+  numeric = false
+  special = false
+}
+
 provider "aws" {
   region = "eu-central-1"
 }
@@ -28,7 +39,7 @@ resource "aws_acm_certificate" "aws12" {
 }
 
 resource "aws_secretsmanager_secret" "aws12" {
-  name = "aakulov-tfe_license"
+  name = "${local.friendly_name_prefix}-license"
 }
 
 resource "aws_secretsmanager_secret_version" "aws12" {
@@ -36,15 +47,17 @@ resource "aws_secretsmanager_secret_version" "aws12" {
   secret_binary = filebase64(var.tfe_license_path)
 }
 
-output "aws_acm_certificate_arn" {
-  value = aws_acm_certificate.aws12.arn
+module "kms" {
+  source    = "../terraform-aws-terraform-enterprise/fixtures/kms"
+  key_alias = "${local.friendly_name_prefix}-key"
 }
 
-
 module "tfe_node" {
-  source                 = "../terraform-aws-terraform-enterprise"
-  friendly_name_prefix   = "aakulov"
-  domain_name            = "akulov.cc"
-  tfe_license_secret_id  = data.aws_secretsmanager_secret_version.aws12.secret_id
-  acm_certificate_arn    = aws_acm_certificate.aws12.arn
+  source                = "../terraform-aws-terraform-enterprise"
+  friendly_name_prefix  = "aakulov"
+  domain_name           = "akulov.cc"
+  tfe_license_secret_id = aws_secretsmanager_secret_version.aws12.secret_id
+  acm_certificate_arn   = aws_acm_certificate.aws12.arn
+  kms_key_arn           = module.kms.key
+  distribution          = var.distribution
 }

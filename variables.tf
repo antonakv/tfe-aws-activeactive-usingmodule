@@ -22,3 +22,6 @@ variable "tfe_license_path" {
   type        = string
   description = "TFE license path"
 }
+variable "distribution" {
+  type = string
+}
