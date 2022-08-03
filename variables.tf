@@ -25,3 +25,19 @@ variable "tfe_license_path" {
 variable "distribution" {
   type = string
 }
+variable "tfe_subdomain" {
+  type        = string
+  description = "Subdomain name for TFE"
+}
+variable "tags" {
+  type        = string
+  description = "Tags for ASG"
+}
+variable "vm_cert_path" {
+  type        = string
+  description = "VM certificate path"
+}
+variable "vm_key_path" {
+  type        = string
+  description = "VM key path"
+}
