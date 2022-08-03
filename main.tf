@@ -38,13 +38,31 @@ resource "aws_acm_certificate" "aws12" {
   }
 }
 
-resource "aws_secretsmanager_secret" "aws12" {
+resource "aws_secretsmanager_secret" "license" {
   name = "${local.friendly_name_prefix}-license"
 }
 
-resource "aws_secretsmanager_secret_version" "aws12" {
-  secret_id     = aws_secretsmanager_secret.aws12.id
+resource "aws_secretsmanager_secret_version" "license" {
+  secret_id     = aws_secretsmanager_secret.license.id
   secret_binary = filebase64(var.tfe_license_path)
+}
+
+resource "aws_secretsmanager_secret" "vm_cert" {
+  name = "${local.friendly_name_prefix}-cert"
+}
+
+resource "aws_secretsmanager_secret_version" "vm_cert" {
+  secret_id     = aws_secretsmanager_secret.vm_cert.id
+  secret_binary = filebase64(var.vm_cert_path)
+}
+
+resource "aws_secretsmanager_secret" "vm_key" {
+  name = "${local.friendly_name_prefix}-key"
+}
+
+resource "aws_secretsmanager_secret_version" "vm_key" {
+  secret_id     = aws_secretsmanager_secret.vm_key.id
+  secret_binary = filebase64(var.vm_key_path)
 }
 
 module "kms" {
@@ -52,12 +70,52 @@ module "kms" {
   key_alias = "${local.friendly_name_prefix}-key"
 }
 
-module "tfe_node" {
+/* module "tfe_node" {
   source                = "../terraform-aws-terraform-enterprise"
   friendly_name_prefix  = "aakulov"
   domain_name           = "akulov.cc"
-  tfe_license_secret_id = aws_secretsmanager_secret_version.aws12.secret_id
+  tfe_license_secret_id = aws_secretsmanager_secret_version.license.secret_id
   acm_certificate_arn   = aws_acm_certificate.aws12.arn
   kms_key_arn           = module.kms.key
   distribution          = var.distribution
+} */
+
+data "aws_ami" "rhel" {
+  owners = ["309956199498"] # RedHat
+
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["RHEL-7.9_HVM-*-x86_64-*-Hourly2-GP2"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+module "active_active" {
+  source                      = "../terraform-aws-terraform-enterprise"
+  acm_certificate_arn         = aws_acm_certificate.aws12.arn
+  domain_name                 = var.domain_name
+  friendly_name_prefix        = local.friendly_name_prefix
+  tfe_license_secret_id       = aws_secretsmanager_secret_version.license.secret_id
+  ami_id                      = data.aws_ami.rhel.id
+  distribution                = "rhel"
+  iact_subnet_list            = ["0.0.0.0/0"]
+  iam_role_policy_arns        = ["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore", "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"]
+  instance_type               = "m5.8xlarge"
+  kms_key_arn                 = module.kms.key
+  load_balancing_scheme       = "PRIVATE_TCP"
+  node_count                  = 2
+  redis_encryption_at_rest    = true
+  redis_encryption_in_transit = true
+  redis_use_password_auth     = true
+  tfe_subdomain               = var.tfe_subdomain
+  tls_bootstrap_cert_pathname = "/var/lib/terraform-enterprise/certificate.pem"
+  tls_bootstrap_key_pathname  = "/var/lib/terraform-enterprise/key.pem"
+  vm_certificate_secret_id    = aws_secretsmanager_secret_version.vm_cert.secret_id
+  vm_key_secret_id            = aws_secretsmanager_secret_version.vm_key.secret_id
 }
