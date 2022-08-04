@@ -1,5 +1,13 @@
 locals {
   friendly_name_prefix = random_string.friendly_name.id
+  common_tags = {
+    Terraform   = "cloud"
+    Environment = "tfe_modules_test"
+    Description = "Public Active/Active"
+    Repository  = "hashicorp/terraform-aws-terraform-enterprise"
+    Team        = "Terraform Enterprise on Prem"
+    OkToDelete  = "True"
+  }
 }
 
 resource "random_string" "friendly_name" {
@@ -108,7 +116,7 @@ module "active_active" {
   iam_role_policy_arns        = ["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore", "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"]
   instance_type               = "m5.8xlarge"
   kms_key_arn                 = module.kms.key
-  load_balancing_scheme       = "PRIVATE_TCP"
+  load_balancing_scheme       = "PUBLIC"
   node_count                  = 2
   redis_encryption_at_rest    = true
   redis_encryption_in_transit = true
