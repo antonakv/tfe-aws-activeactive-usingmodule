@@ -89,7 +89,7 @@ tfe_subdomain           = "tfe-xx"
 tags                    = "aakulov"
 vm_cert_path            = "/aakulov-aws-eu.pem"
 vm_key_path             = "/aakulov-aws-eu.pub"
-
+release_sequence        = 647
 ```
 
 - Run the `terraform apply`
