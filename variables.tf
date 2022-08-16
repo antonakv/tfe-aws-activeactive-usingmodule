@@ -41,3 +41,7 @@ variable "vm_key_path" {
   type        = string
   description = "VM key path"
 }
+variable "release_sequence" {
+  type        = number
+  description = "TFE release number"
+}
